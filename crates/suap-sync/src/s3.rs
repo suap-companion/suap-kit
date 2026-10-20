@@ -238,7 +238,7 @@ impl S3Backend {
         let nanos = (self.now)()
             .duration_since(SystemTime::UNIX_EPOCH)
             .map_or(0, |elapsed| elapsed.as_nanos());
-        let name = format!("chamados-sync-probe-{nanos}");
+        let name = format!("{}-sync-probe-{nanos}", suap_core::app_name());
         let first = self.put(&name, b"probe", Condition::Absent).await?;
         let second = self.put(&name, b"probe", Condition::Absent).await;
         let cleanup = self.delete(&name).await;

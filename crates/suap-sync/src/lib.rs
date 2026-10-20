@@ -28,9 +28,9 @@ pub mod setup;
 pub mod sigv4;
 
 pub use backend::{Condition, DirectoryBackend, Object, PutOutcome, SyncBackend};
-pub use credentials::S3Credentials;
+pub use credentials::{access_key_env, secret_key_env, S3Credentials};
 pub use crypto::{decrypt, encrypt, Key};
-pub use keys::{key_exists, load_key, store_key, KeySource, Passphrase, KEY_ENV, PASSPHRASE_ENV};
+pub use keys::{key_env, key_exists, load_key, passphrase_env, store_key, KeySource, Passphrase};
 pub use lock::SyncLock;
 pub use s3::{S3Backend, S3Settings};
 pub use setup::{

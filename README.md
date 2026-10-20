@@ -17,9 +17,9 @@ Este repositório **nunca contém dados do SUAP**: só código.
 Por *git dependency* fixada em tag (o repo não é publicado no crates.io):
 
 ```toml
-suap-core = { git = "https://github.com/suap-companion/suap-kit", tag = "v0.1.1" }
-suap-rag  = { git = "https://github.com/suap-companion/suap-kit", tag = "v0.1.1" }
-suap-sync = { git = "https://github.com/suap-companion/suap-kit", tag = "v0.1.1" }
+suap-core = { git = "https://github.com/suap-companion/suap-kit", tag = "v0.2.0" }
+suap-rag  = { git = "https://github.com/suap-companion/suap-kit", tag = "v0.2.0" }
+suap-sync = { git = "https://github.com/suap-companion/suap-kit", tag = "v0.2.0" }
 ```
 
 ## Desenvolver
@@ -28,5 +28,5 @@ Regras em [AGENTS.md](AGENTS.md). Validação completa (igual ao CI): `sh script
 
 ## Notas
 
-- `suap-core` ainda grava em diretórios com o nome `chamados` (constante `APPLICATION`) e `suap-sync` usa o serviço de chaveiro `chamados-sync`: mantido para não mudar o comportamento do chamados. Parametrizar é trabalho futuro.
+- **Nome do aplicativo:** chame `suap_core::set_app_name("meu-app")` uma vez, no início do programa. O nome decide o diretório de dados, o serviço do chaveiro (`meu-app-sync`), as variáveis de ambiente (`MEU_APP_SYNC_KEY`, `MEU_APP_SYNC_PASSPHRASE`, `MEU_APP_S3_ACCESS_KEY_ID`, `MEU_APP_S3_SECRET_ACCESS_KEY`) e o comando citado nas mensagens (`meu-app sync credentials set`). Sem a chamada, vale `chamados` (compatibilidade com o primeiro aplicativo). A configuração (`~/.config/suap`) é compartilhada entre os aplicativos.
 - `suap-rag`: a busca é por palavras (FTS5/BM25), sem sinônimos.

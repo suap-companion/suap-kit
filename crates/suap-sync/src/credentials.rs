@@ -5,15 +5,23 @@
 
 use std::{fs, path::Path};
 
+use suap_core::app_env_prefix;
+
 use crate::{
     keys::{keyring_entry_named, write_private},
     SyncError,
 };
 
-/// Environment variable with the access key id.
-pub const ACCESS_KEY_ENV: &str = "CHAMADOS_S3_ACCESS_KEY_ID";
-/// Environment variable with the secret access key.
-pub const SECRET_KEY_ENV: &str = "CHAMADOS_S3_SECRET_ACCESS_KEY";
+/// Environment variable with the access key id: `<APP>_S3_ACCESS_KEY_ID`.
+pub fn access_key_env() -> String {
+    format!("{}_S3_ACCESS_KEY_ID", app_env_prefix())
+}
+
+/// Environment variable with the secret access key: `<APP>_S3_SECRET_ACCESS_KEY`.
+pub fn secret_key_env() -> String {
+    format!("{}_S3_SECRET_ACCESS_KEY", app_env_prefix())
+}
+
 const FALLBACK_ACCESS_KEY_ENV: &str = "AWS_ACCESS_KEY_ID";
 const FALLBACK_SECRET_KEY_ENV: &str = "AWS_SECRET_ACCESS_KEY";
 const KEYRING_USER: &str = "s3-credentials";
@@ -46,14 +54,16 @@ impl S3Credentials {
         }
     }
 
-    /// From the environment: `CHAMADOS_S3_*`, or else the standard `AWS_*` variables.
+    /// From the environment: `<APP>_S3_*`, or else the standard `AWS_*` variables.
     pub fn from_env(env: &dyn Fn(&str) -> Option<String>) -> Option<Self> {
-        let pick = |own: &str, standard: &str| {
-            env(own).or_else(|| env(standard)).filter(|v| !v.is_empty())
+        let pick = |own: String, standard: &str| {
+            env(&own)
+                .or_else(|| env(standard))
+                .filter(|v| !v.is_empty())
         };
         Some(Self {
-            access_key_id: pick(ACCESS_KEY_ENV, FALLBACK_ACCESS_KEY_ENV)?,
-            secret_access_key: pick(SECRET_KEY_ENV, FALLBACK_SECRET_KEY_ENV)?,
+            access_key_id: pick(access_key_env(), FALLBACK_ACCESS_KEY_ENV)?,
+            secret_access_key: pick(secret_key_env(), FALLBACK_SECRET_KEY_ENV)?,
         })
     }
 
@@ -165,7 +175,7 @@ mod tests {
     }
 
     #[test]
-    fn reads_the_environment_preferring_the_chamados_names() {
+    fn reads_the_environment_preferring_the_apps_own_names() {
         let env = |pairs: &'static [(&'static str, &'static str)]| {
             move |name: &str| {
                 pairs
@@ -175,8 +185,8 @@ mod tests {
             }
         };
         let own = env(&[
-            (ACCESS_KEY_ENV, "own-id"),
-            (SECRET_KEY_ENV, "own-secret"),
+            ("CHAMADOS_S3_ACCESS_KEY_ID", "own-id"),
+            ("CHAMADOS_S3_SECRET_ACCESS_KEY", "own-secret"),
             ("AWS_ACCESS_KEY_ID", "aws-id"),
         ]);
         let found = S3Credentials::from_env(&own).unwrap();
@@ -195,10 +205,14 @@ mod tests {
             S3Credentials::from_env(&aws).unwrap().access_key_id,
             "aws-id"
         );
-        assert!(S3Credentials::from_env(&env(&[(ACCESS_KEY_ENV, "so-o-id")])).is_none());
         assert!(
-            S3Credentials::from_env(&env(&[(ACCESS_KEY_ENV, ""), (SECRET_KEY_ENV, "x")])).is_none()
+            S3Credentials::from_env(&env(&[("CHAMADOS_S3_ACCESS_KEY_ID", "so-o-id")])).is_none()
         );
+        assert!(S3Credentials::from_env(&env(&[
+            ("CHAMADOS_S3_ACCESS_KEY_ID", ""),
+            ("CHAMADOS_S3_SECRET_ACCESS_KEY", "x")
+        ]))
+        .is_none());
         let loaded = S3Credentials::load_with_env(&aws).unwrap();
         assert_eq!(loaded.unwrap().secret_access_key, "aws-secret");
     }

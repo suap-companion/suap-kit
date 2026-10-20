@@ -5,9 +5,11 @@
 //! - [`KeySource::File`]: a hexadecimal key in a file only the owner can read (`0600` on Unix).
 //! - [`KeySource::Protected`]: a key file sealed with a passphrase (see [`crate::protected`]), for
 //!   interactive use on machines without a keyring.
-//! - [`KeySource::Env`]: the hexadecimal key in the [`KEY_ENV`] environment variable (read only).
+//! - [`KeySource::Env`]: the hexadecimal key in the [`key_env`] environment variable (read only).
 
 use std::{fs, path::PathBuf};
+
+use suap_core::{app_env_prefix, app_name};
 
 use crate::{
     crypto::Key,
@@ -15,11 +17,20 @@ use crate::{
     SyncError,
 };
 
-/// Environment variable holding the hexadecimal key for [`KeySource::Env`].
-pub const KEY_ENV: &str = "CHAMADOS_SYNC_KEY";
-/// Environment variable with the passphrase of a protected key file (for scripts; the terminal is asked otherwise).
-pub const PASSPHRASE_ENV: &str = "CHAMADOS_SYNC_PASSPHRASE";
-const KEYRING_SERVICE: &str = "chamados-sync";
+/// Environment variable holding the hexadecimal key for [`KeySource::Env`]: `<APP>_SYNC_KEY`.
+pub fn key_env() -> String {
+    format!("{}_SYNC_KEY", app_env_prefix())
+}
+
+/// Environment variable with the passphrase of a protected key file (for scripts; the terminal is
+/// asked otherwise): `<APP>_SYNC_PASSPHRASE`.
+pub fn passphrase_env() -> String {
+    format!("{}_SYNC_PASSPHRASE", app_env_prefix())
+}
+
+fn keyring_service() -> String {
+    format!("{}-sync", app_name())
+}
 const KEYRING_USER: &str = "encryption-key";
 
 /// A passphrase; it is never shown, not even by `Debug`.
@@ -104,7 +115,7 @@ pub fn load_key_with_env(
     env: &dyn Fn(&str) -> Option<String>,
 ) -> Result<Option<Key>, SyncError> {
     match source {
-        KeySource::Env => env(KEY_ENV).map(|hex| Key::from_hex(&hex)).transpose(),
+        KeySource::Env => env(&key_env()).map(|hex| Key::from_hex(&hex)).transpose(),
         KeySource::File(path) => {
             if !path.exists() {
                 return Ok(None);
@@ -138,7 +149,8 @@ pub fn key_exists(source: &KeySource) -> Result<bool, SyncError> {
 pub fn store_key(source: &KeySource, key: &Key, overwrite: bool) -> Result<(), SyncError> {
     if matches!(source, KeySource::Env) {
         return Err(SyncError::Key(format!(
-            "the env key source is read only: set {KEY_ENV} yourself"
+            "the env key source is read only: set {} yourself",
+            key_env()
         )));
     }
     if !overwrite && key_exists(source)? {
@@ -165,7 +177,7 @@ pub(crate) fn keyring_entry_named(user: &str) -> Result<keyring_core::Entry, Syn
     if keyring_core::get_default_store().is_none() {
         install_native_store()?;
     }
-    Ok(keyring_core::Entry::new(KEYRING_SERVICE, user)?)
+    Ok(keyring_core::Entry::new(&keyring_service(), user)?)
 }
 
 /// Serializes the tests that replace the process-wide default keyring store.
@@ -354,7 +366,7 @@ mod tests {
         let error = store_key(&KeySource::Env, &key, true)
             .unwrap_err()
             .to_string();
-        assert!(error.contains("read only") && error.contains(KEY_ENV));
+        assert!(error.contains("read only") && error.contains(&key_env()));
     }
 
     #[test]

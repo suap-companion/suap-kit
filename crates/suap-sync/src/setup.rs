@@ -2,11 +2,11 @@
 
 use std::path::PathBuf;
 
-use suap_core::{AppPaths, SyncSettings};
+use suap_core::{app_name, AppPaths, SyncSettings};
 
 use crate::{
     backend::{Condition, DirectoryBackend, Object, PutOutcome, SyncBackend},
-    credentials::S3Credentials,
+    credentials::{access_key_env, secret_key_env, S3Credentials},
     keys::KeySource,
     s3::{S3Backend, S3Settings},
     SyncError,
@@ -101,11 +101,12 @@ pub fn backend_from(
         Some(S3_BACKEND | R2_BACKEND) => {
             let s3_settings = S3Settings::from_settings(settings)?;
             let credentials = credentials.ok_or_else(|| {
-                SyncError::Key(
-                    "no S3 credentials: set CHAMADOS_S3_ACCESS_KEY_ID and CHAMADOS_S3_SECRET_ACCESS_KEY, \
-                     or run `chamados sync credentials set`"
-                        .to_owned(),
-                )
+                SyncError::Key(format!(
+                    "no S3 credentials: set {} and {}, or run `{} sync credentials set`",
+                    access_key_env(),
+                    secret_key_env(),
+                    app_name()
+                ))
             })?;
             Ok(AnyBackend::S3(Box::new(S3Backend::new(
                 s3_settings,
@@ -173,7 +174,7 @@ mod tests {
             .unwrap();
         assert!(no_credentials
             .to_string()
-            .contains("chamados sync credentials set"));
+            .contains("`chamados sync credentials set`"));
         let bad_s3 = backend_from(&s3(None, Some("b")), credentials())
             .err()
             .unwrap();

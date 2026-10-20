@@ -5,7 +5,7 @@ use std::{
     fs,
     io::{BufReader, Write},
     path::{Path, PathBuf},
-    sync::Arc,
+    sync::{Arc, OnceLock},
 };
 
 use directories::{BaseDirs, ProjectDirs};
@@ -17,7 +17,6 @@ use thiserror::Error;
 
 const QUALIFIER: &str = "br.edu.ifrn";
 const ORGANIZATION: &str = "suap-companion";
-const APPLICATION: &str = "chamados";
 const CONFIG_FILE: &str = "config.toml";
 const SESSION_FILE: &str = "session.cookies";
 const TITLES_FILE: &str = "titles.json";
@@ -25,6 +24,43 @@ const ARCHIVE_FILE: &str = "archive.json";
 const SNOOZE_FILE: &str = "snooze.json";
 const CONFIG_DIR_IN_HOME: [&str; 2] = [".config", "suap"];
 const LOGIN_PATH: &str = "/accounts/login/";
+
+/// Name of the program when [`set_app_name`] was never called (the first user of this crate).
+pub const DEFAULT_APP_NAME: &str = "chamados";
+static APP_NAME: OnceLock<String> = OnceLock::new();
+
+/// Names the program that uses this library, once, at startup. The name decides the data directory,
+/// the keyring service (`<name>-sync`), the environment variables (`<NAME>_SYNC_KEY`, ...) and the
+/// command shown in messages. Lowercase letters, digits and `-`; calling it again with the same
+/// name is fine, with another one is an error.
+pub fn set_app_name(name: &str) -> Result<(), SuapError> {
+    let valid = !name.is_empty()
+        && name.starts_with(|c: char| c.is_ascii_lowercase())
+        && name
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-');
+    if !valid {
+        return Err(SuapError::InvalidAppName(name.to_owned()));
+    }
+    if APP_NAME.get_or_init(|| name.to_owned()) == name {
+        Ok(())
+    } else {
+        Err(SuapError::InvalidAppName(format!(
+            "{name} (already named {})",
+            app_name()
+        )))
+    }
+}
+
+/// The name set by [`set_app_name`], or [`DEFAULT_APP_NAME`].
+pub fn app_name() -> &'static str {
+    APP_NAME.get().map_or(DEFAULT_APP_NAME, String::as_str)
+}
+
+/// The name as an environment variable prefix: `base-conhecimento` becomes `BASE_CONHECIMENTO`.
+pub fn app_env_prefix() -> String {
+    app_name().to_ascii_uppercase().replace('-', "_")
+}
 
 /// Profile used when none is requested.
 pub const DEFAULT_PROFILE: &str = "default";
@@ -41,7 +77,7 @@ impl AppPaths {
     /// Configuration lives in `~/.config/suap` on every platform; session data uses the OS data directory.
     pub fn discover() -> Result<Self, SuapError> {
         let home = BaseDirs::new().ok_or(SuapError::DirectoriesUnavailable)?;
-        let project = ProjectDirs::from(QUALIFIER, ORGANIZATION, APPLICATION)
+        let project = ProjectDirs::from(QUALIFIER, ORGANIZATION, app_name())
             .ok_or(SuapError::DirectoriesUnavailable)?;
         Ok(Self::from_dirs(
             config_dir_in(home.home_dir()),
@@ -662,6 +698,8 @@ fn restrict_permissions(path: &Path) -> Result<(), SuapError> {
 pub enum SuapError {
     #[error("application directories are unavailable")]
     DirectoriesUnavailable,
+    #[error("invalid application name: {0}")]
+    InvalidAppName(String),
     #[error("SUAP configuration is invalid: {0}")]
     InvalidConfiguration(String),
     #[error("SUAP session is not authenticated")]
