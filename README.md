@@ -17,9 +17,9 @@ Este repositório **nunca contém dados do SUAP**: só código.
 Por *git dependency* fixada em tag (o repo não é publicado no crates.io):
 
 ```toml
-suap-core = { git = "https://github.com/suap-companion/suap-kit", tag = "v0.1.0" }
-suap-rag  = { git = "https://github.com/suap-companion/suap-kit", tag = "v0.1.0" }
-suap-sync = { git = "https://github.com/suap-companion/suap-kit", tag = "v0.1.0" }
+suap-core = { git = "https://github.com/suap-companion/suap-kit", tag = "v0.1.1" }
+suap-rag  = { git = "https://github.com/suap-companion/suap-kit", tag = "v0.1.1" }
+suap-sync = { git = "https://github.com/suap-companion/suap-kit", tag = "v0.1.1" }
 ```
 
 ## Desenvolver

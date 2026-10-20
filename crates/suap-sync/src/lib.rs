@@ -59,4 +59,26 @@ pub enum SyncError {
     Conflict,
     #[error(transparent)]
     Config(#[from] suap_core::SuapError),
+    /// A failure of the application's own data (what is synchronized), kept as it came.
+    #[error(transparent)]
+    Local(Box<dyn std::error::Error + Send + Sync>),
+}
+
+impl SyncError {
+    /// Wraps an error of the application's own data.
+    pub fn local(error: impl std::error::Error + Send + Sync + 'static) -> Self {
+        Self::Local(Box::new(error))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn local_errors_keep_the_text_of_their_source() {
+        let error = SyncError::local(std::io::Error::other("disco cheio"));
+        assert!(matches!(error, SyncError::Local(_)));
+        assert_eq!(error.to_string(), "disco cheio");
+    }
 }
