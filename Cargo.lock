@@ -2789,7 +2789,7 @@ dependencies = [
 
 [[package]]
 name = "suap-core"
-version = "0.1.1"
+version = "0.2.1"
 dependencies = [
  "cookie_store 0.21.1",
  "directories",
@@ -2807,7 +2807,7 @@ dependencies = [
 
 [[package]]
 name = "suap-rag"
-version = "0.1.1"
+version = "0.2.1"
 dependencies = [
  "lopdf",
  "pdf-extract",
@@ -2818,7 +2818,7 @@ dependencies = [
 
 [[package]]
 name = "suap-sync"
-version = "0.1.1"
+version = "0.2.1"
 dependencies = [
  "apple-native-keyring-store",
  "argon2",
