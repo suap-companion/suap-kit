@@ -165,12 +165,15 @@ mod tests {
         let text = credentials().describe();
         assert_eq!(text, "Access Key ID: 7 caracteres; Secret: 12 caracteres");
         assert!(!text.contains("AKIA") && !text.contains("s3cr3t"));
-        for (id, secret) in [("AKIA 1", "ok"), ("ok", "\"quoted\""), ("ok", "açúcar")] {
+        for (case, (id, secret)) in [("AKIA 1", "ok"), ("ok", "\"quoted\""), ("ok", "açúcar")]
+            .into_iter()
+            .enumerate()
+        {
             let odd = S3Credentials {
                 access_key_id: id.to_owned(),
                 secret_access_key: secret.to_owned(),
             };
-            assert!(odd.describe().contains("atenção"), "{id} {secret}");
+            assert!(odd.describe().contains("atenção"), "caso {case}");
         }
     }
 
